@@ -2,6 +2,7 @@ package s3store
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -461,6 +462,24 @@ func TestFinishUpload(t *testing.T) {
 				},
 			},
 		}).Return(nil, nil),
+		s3obj.EXPECT().GetObject(&s3.GetObjectInput{
+			Bucket: aws.String("bucket"),
+			Key:    aws.String("uploadId.info"),
+		}).Return(&s3.GetObjectOutput{
+			Body: ioutil.NopCloser(bytes.NewReader([]byte(`{"ID":"uploadId+multipartId","Size":400,"Offset":400,"MetaData":null,"IsPartial":false,"IsFinal":false,"PartialUploads":null}`))),
+		}, nil),
+		s3obj.EXPECT().ListParts(&s3.ListPartsInput{
+			Bucket:           aws.String("bucket"),
+			Key:              aws.String("uploadId"),
+			UploadId:         aws.String("multipartId"),
+			PartNumberMarker: aws.Int64(0),
+		}).Return(nil, awserr.New("NoSuchUpload", "", errors.New(""))),
+		s3obj.EXPECT().PutObject(&s3.PutObjectInput{
+			Bucket:        aws.String("bucket"),
+			Key:           aws.String("uploadId.info"),
+			Body:          bytes.NewReader([]byte(`{"ID":"uploadId","Size":400,"SizeIsDeferred":false,"Offset":400,"MetaData":null,"IsPartial":false,"IsFinal":false,"PartialUploads":null}`)),
+			ContentLength: aws.Int64(int64(136)),
+		}),
 	)
 
 	err := store.FinishUpload("uploadId+multipartId")
@@ -1069,6 +1088,24 @@ func TestConcatUploads(t *testing.T) {
 				},
 			},
 		}).Return(nil, nil),
+		s3obj.EXPECT().GetObject(&s3.GetObjectInput{
+			Bucket: aws.String("bucket"),
+			Key:    aws.String("uploadId.info"),
+		}).Return(&s3.GetObjectOutput{
+			Body: ioutil.NopCloser(bytes.NewReader([]byte(`{"ID":"uploadId+multipartId","Size":400,"Offset":400,"MetaData":null,"IsPartial":false,"IsFinal":false,"PartialUploads":null}`))),
+		}, nil),
+		s3obj.EXPECT().ListParts(&s3.ListPartsInput{
+			Bucket:           aws.String("bucket"),
+			Key:              aws.String("uploadId"),
+			UploadId:         aws.String("multipartId"),
+			PartNumberMarker: aws.Int64(0),
+		}).Return(nil, awserr.New("NoSuchUpload", "", errors.New(""))),
+		s3obj.EXPECT().PutObject(&s3.PutObjectInput{
+			Bucket:        aws.String("bucket"),
+			Key:           aws.String("uploadId.info"),
+			Body:          bytes.NewReader([]byte(`{"ID":"uploadId","Size":400,"SizeIsDeferred":false,"Offset":400,"MetaData":null,"IsPartial":false,"IsFinal":false,"PartialUploads":null}`)),
+			ContentLength: aws.Int64(int64(136)),
+		}),
 	)
 
 	err := store.ConcatUploads("uploadId+multipartId", []string{

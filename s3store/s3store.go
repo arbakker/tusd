@@ -526,7 +526,6 @@ func (store S3Store) FinishUpload(id string) error {
 	if err != nil {
 		return err
 	}
-
 	info.ID = uploadId
 	err = store.writeInfo(uploadId, info)
 
